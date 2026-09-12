@@ -21,11 +21,20 @@
   let smoothedZ = 9.81;
   let hasReading = false;
   let wasLevel = false;
-  let axisMode = "face"; // "face" = phone flat against the surface, "edge" = phone standing on its edge
+
+  // Which axis is "up" depends on which physical edge/face rests against the
+  // surface, which we can't know in advance — so instead of guessing, tapping
+  // cycles through all three so one of them always matches the actual grip.
+  const AXIS_MODES = [
+    { key: "z", label: "Vinkel \u00b7 Flate" },
+    { key: "y", label: "Vinkel \u00b7 Kant (lang side)" },
+    { key: "x", label: "Vinkel \u00b7 Kant (kort side)" }
+  ];
+  let axisModeIndex = 0;
 
   levelEl.addEventListener("click", () => {
-    axisMode = axisMode === "face" ? "edge" : "face";
-    modeEl.textContent = axisMode === "face" ? "Vinkel \u00b7 Flate" : "Vinkel \u00b7 Kant";
+    axisModeIndex = (axisModeIndex + 1) % AXIS_MODES.length;
+    modeEl.textContent = AXIS_MODES[axisModeIndex].label;
     if (navigator.vibrate) navigator.vibrate(10);
   });
 
@@ -34,11 +43,9 @@
     // so it stays continuous no matter which way the phone is tilted or
     // rotated in hand, unlike the beta/gamma Euler angles from
     // deviceorientation (no more flip on small movement, and no more
-    // direction-dependent sign flip in the line's rotation). "Edge" mode
-    // swaps in the axis that runs along the phone's length, for measuring
-    // while it stands on its edge instead of lying flat against the
-    // surface.
-    const referenceAxis = axisMode === "face" ? smoothedZ : smoothedY;
+    // direction-dependent sign flip in the line's rotation).
+    const axisKey = AXIS_MODES[axisModeIndex].key;
+    const referenceAxis = axisKey === "z" ? smoothedZ : axisKey === "y" ? smoothedY : smoothedX;
     const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
     const cos = Math.max(-1, Math.min(1, Math.abs(referenceAxis) / magnitude));
     const tiltDeg = Math.acos(cos) * (180 / Math.PI);

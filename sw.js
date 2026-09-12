@@ -1,4 +1,4 @@
-const CACHE_NAME = "bubble-level-v10";
+const CACHE_NAME = "bubble-level-v11";
 // Only the icons are cached for offline use. The app shell (HTML/CSS/JS) is
 // never cached here, so there is no possibility of the service worker ever
 // serving stale logic again — it always goes straight to the network.
