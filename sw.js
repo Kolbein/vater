@@ -11,7 +11,18 @@ const ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      // Force a real network fetch for each asset instead of letting the
+      // browser's HTTP cache hand back stale bytes during install.
+      await Promise.all(
+        ASSETS.map(async (url) => {
+          const response = await fetch(url, { cache: "reload" });
+          await cache.put(url, response);
+        })
+      );
+      await self.skipWaiting();
+    })()
   );
 });
 
@@ -26,16 +37,15 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // Network-first: always prefer the live deployed files while online, and
+  // only fall back to the cache when the network is unavailable.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
