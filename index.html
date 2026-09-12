@@ -25,22 +25,31 @@
 
     <section class="readout" aria-live="polite">
       <div class="axis">
-        <span class="axis-label">X</span>
+        <span class="axis-label">Roll</span>
         <span id="tiltX" class="axis-value">0.0°</span>
       </div>
       <div class="axis">
-        <span class="axis-label">Y</span>
+        <span class="axis-label">Pitch</span>
         <span id="tiltY" class="axis-value">0.0°</span>
       </div>
     </section>
 
     <section class="level-wrap">
       <div id="level" class="level">
-        <div class="ring ring-outer"></div>
-        <div class="ring ring-mid"></div>
-        <div class="crosshair crosshair-h"></div>
-        <div class="crosshair crosshair-v"></div>
-        <div id="bubble" class="bubble"></div>
+        <div class="horizon-mask">
+          <div id="horizonRoll" class="horizon-roll">
+            <div id="horizonPitch" class="horizon-pitch">
+              <div class="sky"></div>
+              <div class="ground"></div>
+              <div class="horizon-line"></div>
+            </div>
+          </div>
+        </div>
+        <div class="reference">
+          <span class="reference-tick reference-tick-left"></span>
+          <span class="reference-line"></span>
+          <span class="reference-tick reference-tick-right"></span>
+        </div>
       </div>
     </section>
 
