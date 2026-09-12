@@ -120,6 +120,14 @@
         /* offline support is best-effort */
       });
     });
+    // Auto-reload once when a new service worker takes over, so updates
+    // apply immediately instead of needing a manual double-reload.
+    let hasReloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hasReloaded) return;
+      hasReloaded = true;
+      window.location.reload();
+    });
   }
 })();
 
