@@ -30,21 +30,31 @@
   });
 
   function updateReadout() {
-    // Angle between gravity and the reference axis (or its opposite, via the
-    // absolute value), so tilting either clockwise or counter-clockwise past
-    // the axis reads the same way. This stays continuous regardless of how
-    // the phone is rotated in hand, unlike the beta/gamma Euler angles from
-    // deviceorientation, so small movement no longer causes the display to
-    // flip. "Edge" mode swaps in the axis that runs along the phone's
-    // length, for measuring while it stands on its edge instead of lying
-    // flat against the surface.
-    const referenceAxis = axisMode === "face" ? smoothedZ : smoothedY;
-    const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
-    const cos = Math.max(-1, Math.min(1, Math.abs(referenceAxis) / magnitude));
-    const tiltDeg = Math.acos(cos) * (180 / Math.PI);
+    // Face mode: angle between gravity and the screen-normal axis (z),
+    // via the absolute value so it stays continuous regardless of how the
+    // phone is rotated in hand, unlike the beta/gamma Euler angles from
+    // deviceorientation (no more flip on small movement). There's no single
+    // "direction" to a face tilt, so the line only ever rotates one way.
+    //
+    // Edge mode: signed roll around the phone's long axis (y vs x), so
+    // tilting left vs right rotates the line the correct way instead of
+    // always the same direction, while the displayed number stays the
+    // unsigned magnitude.
+    let tiltDeg;
+    let visualDeg;
+    if (axisMode === "face") {
+      const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
+      const cos = Math.max(-1, Math.min(1, Math.abs(smoothedZ) / magnitude));
+      tiltDeg = Math.acos(cos) * (180 / Math.PI);
+      visualDeg = tiltDeg;
+    } else {
+      const signedDeg = Math.atan2(smoothedX, smoothedY) * (180 / Math.PI);
+      tiltDeg = Math.abs(signedDeg);
+      visualDeg = signedDeg;
+    }
 
-    horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
-    angleEl.textContent = `${tiltDeg.toFixed(1)}°`;
+    horizonRollEl.style.transform = `rotate(${-visualDeg}deg)`;
+    angleEl.textContent = `${Math.round(tiltDeg)}°`;
 
     const isLevel = TARGET_ANGLES.some((target) => Math.abs(tiltDeg - target) < LEVEL_THRESHOLD);
     levelEl.classList.toggle("is-level", isLevel);
