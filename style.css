@@ -37,7 +37,7 @@ body {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16px 20px 4px;
 }
 
@@ -48,50 +48,30 @@ body {
   color: var(--muted);
 }
 
-.icon-btn {
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--ring);
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.icon-btn:active {
-  background: var(--ring);
-}
-
 .readout {
-  display: flex;
-  justify-content: center;
-  gap: 40px;
-  padding: 8px 0 4px;
-}
-
-.axis {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 12px 0 4px;
 }
 
-.axis-label {
-  font-size: 0.85rem;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.axis-value {
+.angle-value {
   font-variant-numeric: tabular-nums;
-  font-size: 3rem;
+  font-size: 5rem;
   font-weight: 700;
   line-height: 1.1;
   transition: color 0.15s ease;
 }
 
-.axis-value.is-level {
+.angle-value.is-level {
   color: var(--accent);
+}
+
+.angle-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .level-wrap {
@@ -129,12 +109,6 @@ body {
   top: -75%;
   width: 250%;
   height: 250%;
-  will-change: transform;
-}
-
-.horizon-pitch {
-  position: absolute;
-  inset: 0;
   will-change: transform;
 }
 

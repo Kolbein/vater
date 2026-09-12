@@ -3,91 +3,79 @@
 
   const levelEl = document.getElementById("level");
   const horizonRollEl = document.getElementById("horizonRoll");
-  const horizonPitchEl = document.getElementById("horizonPitch");
-  const tiltXEl = document.getElementById("tiltX");
-  const tiltYEl = document.getElementById("tiltY");
+  const angleEl = document.getElementById("tiltAngle");
   const enableBtn = document.getElementById("enableBtn");
-  const calibrateBtn = document.getElementById("calibrateBtn");
   const statusEl = document.getElementById("status");
 
-  const MAX_ANGLE = 45; // degrees mapped to the full pitch travel of the horizon
   const LEVEL_THRESHOLD = 0.7; // degrees within which we consider it "level"
-  const MAX_TRAVEL_FRACTION = 0.35; // keep the horizon line inside the circle
-
-  let calibration = { x: 0, y: 0 };
+  const SMOOTHING = 0.15; // lower = smoother but slower to react
 
   function setStatus(text) {
     statusEl.textContent = text;
   }
 
-  function updateBubble(tiltX, tiltY) {
-    const x = tiltX - calibration.x;
-    const y = tiltY - calibration.y;
-
-    const clampedY = Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, y));
-    const maxTravelPx = levelEl.clientHeight * MAX_TRAVEL_FRACTION;
-    const pitchPx = (clampedY / MAX_ANGLE) * maxTravelPx;
-
-    horizonRollEl.style.transform = `rotate(${-x}deg)`;
-    horizonPitchEl.style.transform = `translateY(${pitchPx}px)`;
-
-    tiltXEl.textContent = `${x.toFixed(1)}°`;
-    tiltYEl.textContent = `${y.toFixed(1)}°`;
-
-    const isFlat = Math.abs(x) < LEVEL_THRESHOLD && Math.abs(y) < LEVEL_THRESHOLD;
-    const is45 = Math.abs(Math.abs(x) - 45) < LEVEL_THRESHOLD && Math.abs(y) < LEVEL_THRESHOLD;
-    const isLevel = isFlat || is45;
-    levelEl.classList.toggle("is-level", isLevel);
-    tiltXEl.classList.toggle("is-level", isLevel);
-    tiltYEl.classList.toggle("is-level", isLevel);
-
-    if (navigator.vibrate && isLevel && !updateBubble._wasLevel) {
-      navigator.vibrate(20);
-    }
-    updateBubble._wasLevel = isLevel;
-  }
-
-  let rawX = 0;
-  let rawY = 0;
   let smoothedX = 0;
   let smoothedY = 0;
-  let hasNewReading = false;
-  const SMOOTHING = 0.15; // lower = smoother but slower to react
+  let smoothedZ = 9.81;
+  let hasReading = false;
+  let wasLevel = false;
 
-  function handleOrientation(event) {
-    const { beta, gamma } = event;
-    if (beta === null || gamma === null) return;
+  function updateReadout() {
+    // Angle between gravity and the screen's normal axis (z). Unlike the
+    // beta/gamma Euler angles from deviceorientation, this stays continuous
+    // and doesn't depend on whether the phone is held portrait or sideways,
+    // so small hand movement no longer causes the display to flip.
+    const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
+    const cos = Math.max(-1, Math.min(1, smoothedZ / magnitude));
+    const tiltDeg = Math.acos(cos) * (180 / Math.PI);
 
-    // Portrait-only mapping: avoids flips caused by screen-orientation edge cases.
-    rawX = gamma;
-    rawY = beta;
-    hasNewReading = true;
+    horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
+    angleEl.textContent = `${tiltDeg.toFixed(1)}°`;
+
+    const isFlat = tiltDeg < LEVEL_THRESHOLD;
+    const is45 = Math.abs(tiltDeg - 45) < LEVEL_THRESHOLD;
+    const isLevel = isFlat || is45;
+    levelEl.classList.toggle("is-level", isLevel);
+    angleEl.classList.toggle("is-level", isLevel);
+
+    if (navigator.vibrate && isLevel && !wasLevel) {
+      navigator.vibrate(20);
+    }
+    wasLevel = isLevel;
+  }
+
+  function handleMotion(event) {
+    const g = event.accelerationIncludingGravity;
+    if (!g || g.x === null || g.y === null || g.z === null) return;
+
+    smoothedX += (g.x - smoothedX) * SMOOTHING;
+    smoothedY += (g.y - smoothedY) * SMOOTHING;
+    smoothedZ += (g.z - smoothedZ) * SMOOTHING;
+    hasReading = true;
   }
 
   function renderLoop() {
-    if (hasNewReading) {
-      smoothedX += (rawX - smoothedX) * SMOOTHING;
-      smoothedY += (rawY - smoothedY) * SMOOTHING;
-      updateBubble(smoothedX, smoothedY);
+    if (hasReading) {
+      updateReadout();
     }
     requestAnimationFrame(renderLoop);
   }
 
   function startListening() {
-    window.addEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("devicemotion", handleMotion);
     requestAnimationFrame(renderLoop);
-    setStatus("Legg telefonen flatt på et underlag.");
+    setStatus("Legg telefonen mot flaten du vil sjekke.");
   }
 
   function needsIOSPermission() {
     return (
-      typeof DeviceOrientationEvent !== "undefined" &&
-      typeof DeviceOrientationEvent.requestPermission === "function"
+      typeof DeviceMotionEvent !== "undefined" &&
+      typeof DeviceMotionEvent.requestPermission === "function"
     );
   }
 
   function init() {
-    if (!window.DeviceOrientationEvent) {
+    if (!window.DeviceMotionEvent) {
       setStatus("Denne enheten støtter ikke bevegelsessensorer.");
       return;
     }
@@ -97,7 +85,7 @@
       setStatus("Trykk på knappen under for å gi tilgang til bevegelsessensorer.");
       enableBtn.addEventListener("click", async () => {
         try {
-          const result = await DeviceOrientationEvent.requestPermission();
+          const result = await DeviceMotionEvent.requestPermission();
           if (result === "granted") {
             enableBtn.hidden = true;
             startListening();
@@ -113,12 +101,6 @@
     }
   }
 
-  calibrateBtn.addEventListener("click", () => {
-    calibration = { x: smoothedX, y: smoothedY };
-    if (navigator.vibrate) navigator.vibrate(15);
-    setStatus("Kalibrert til gjeldende posisjon.");
-  });
-
   init();
 
   if ("serviceWorker" in navigator) {
@@ -129,3 +111,4 @@
     });
   }
 })();
+
