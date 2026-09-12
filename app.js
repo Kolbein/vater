@@ -40,7 +40,10 @@
     const cos = Math.max(-1, Math.min(1, referenceAxis / magnitude));
     const tiltDeg = Math.acos(cos) * (180 / Math.PI);
 
-    horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
+    // Edge mode targets 45°, so the ground should read flat/level right at
+    // that target instead of at 0°, matching the natural feel of face mode.
+    const visualTarget = axisMode === "face" ? 0 : 45;
+    horizonRollEl.style.transform = `rotate(${-(tiltDeg - visualTarget)}deg)`;
     angleEl.textContent = `${tiltDeg.toFixed(1)}°`;
 
     const isFlat = tiltDeg < LEVEL_THRESHOLD;
