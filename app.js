@@ -33,10 +33,12 @@
   // always produces the same angle, with no axis to get wrong.
   let mode = "face"; // "face" | "edge"
   let edgeReference = null;
+  let edgeAxis = null;
 
   function captureEdgeReference() {
     const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
     edgeReference = { x: smoothedX / magnitude, y: smoothedY / magnitude, z: smoothedZ / magnitude };
+    edgeAxis = null;
   }
 
   levelEl.addEventListener("click", () => {
@@ -64,19 +66,40 @@
       tiltDeg = Math.acos(cos) * (180 / Math.PI);
     } else {
       // Angle between the current orientation and the captured reference
-      // vector (dot product of two unit vectors), which is symmetric for
-      // tilting either direction away from that reference.
+      // vector (dot product of two unit vectors), via acos, which only ever
+      // gives an unsigned magnitude — so we recover the sign (left vs right)
+      // from the cross product, which points along the axis the phone is
+      // rotating around. We lock onto that axis the first time the tilt is
+      // large enough to measure it reliably, then reuse it on every later
+      // frame so the sign stays consistent even as the tilt returns near zero.
       const rx = smoothedX / magnitude;
       const ry = smoothedY / magnitude;
       const rz = smoothedZ / magnitude;
       const dot = rx * edgeReference.x + ry * edgeReference.y + rz * edgeReference.z;
-      tiltDeg = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+      const unsignedDeg = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+
+      const cx = edgeReference.y * rz - edgeReference.z * ry;
+      const cy = edgeReference.z * rx - edgeReference.x * rz;
+      const cz = edgeReference.x * ry - edgeReference.y * rx;
+      const crossMagnitude = Math.hypot(cx, cy, cz);
+
+      if (!edgeAxis && crossMagnitude > 0.05) {
+        edgeAxis = { x: cx / crossMagnitude, y: cy / crossMagnitude, z: cz / crossMagnitude };
+      }
+
+      if (edgeAxis) {
+        const signedComponent = cx * edgeAxis.x + cy * edgeAxis.y + cz * edgeAxis.z;
+        tiltDeg = signedComponent < 0 ? -unsignedDeg : unsignedDeg;
+      } else {
+        tiltDeg = unsignedDeg;
+      }
     }
 
+    const displayDeg = Math.abs(tiltDeg);
     horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
-    angleEl.textContent = `${Math.round(tiltDeg)}°`;
+    angleEl.textContent = `${Math.round(displayDeg)}°`;
 
-    const isLevel = TARGET_ANGLES.some((target) => Math.abs(tiltDeg - target) < LEVEL_THRESHOLD);
+    const isLevel = TARGET_ANGLES.some((target) => Math.abs(displayDeg - target) < LEVEL_THRESHOLD);
     levelEl.classList.toggle("is-level", isLevel);
     angleEl.classList.toggle("is-level", isLevel);
 
