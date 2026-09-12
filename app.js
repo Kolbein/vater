@@ -22,33 +22,56 @@
   let hasReading = false;
   let wasLevel = false;
 
-  // Which axis is "up" depends on which physical edge/face rests against the
-  // surface, which we can't know in advance — so instead of guessing, tapping
-  // cycles through all three so one of them always matches the actual grip.
-  const AXIS_MODES = [
-    { key: "z", label: "Vinkel \u00b7 Flate" },
-    { key: "y", label: "Vinkel \u00b7 Kant (lang side)" },
-    { key: "x", label: "Vinkel \u00b7 Kant (kort side)" }
-  ];
-  let axisModeIndex = 0;
+  // "Flate" measures the absolute angle from gravity (screen-normal axis) —
+  // well-defined regardless of how the phone is rotated in hand. "Kant" has
+  // no single well-defined axis (it depends on which edge and which way the
+  // phone is held, which we can't know or reliably read back from the raw
+  // sensor across browsers), so instead we capture the current orientation
+  // as a reference vector the moment edge mode is entered, and measure the
+  // angle away from that reference. This is symmetric by construction: a
+  // physical tilt of N degrees to the left or right away from the reference
+  // always produces the same angle, with no axis to get wrong.
+  let mode = "face"; // "face" | "edge"
+  let edgeReference = null;
+
+  function captureEdgeReference() {
+    const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
+    edgeReference = { x: smoothedX / magnitude, y: smoothedY / magnitude, z: smoothedZ / magnitude };
+  }
 
   levelEl.addEventListener("click", () => {
-    axisModeIndex = (axisModeIndex + 1) % AXIS_MODES.length;
-    modeEl.textContent = AXIS_MODES[axisModeIndex].label;
+    if (mode === "face") {
+      mode = "edge";
+      captureEdgeReference();
+      modeEl.textContent = "Vinkel \u00b7 Kant";
+    } else {
+      mode = "face";
+      modeEl.textContent = "Vinkel \u00b7 Flate";
+    }
     if (navigator.vibrate) navigator.vibrate(10);
   });
 
   function updateReadout() {
-    // Angle between gravity and the reference axis, via the absolute value
-    // so it stays continuous no matter which way the phone is tilted or
-    // rotated in hand, unlike the beta/gamma Euler angles from
-    // deviceorientation (no more flip on small movement, and no more
-    // direction-dependent sign flip in the line's rotation).
-    const axisKey = AXIS_MODES[axisModeIndex].key;
-    const referenceAxis = axisKey === "z" ? smoothedZ : axisKey === "y" ? smoothedY : smoothedX;
     const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
-    const cos = Math.max(-1, Math.min(1, Math.abs(referenceAxis) / magnitude));
-    const tiltDeg = Math.acos(cos) * (180 / Math.PI);
+    let tiltDeg;
+
+    if (mode === "face") {
+      // Angle between gravity and the screen-normal axis (z), via the
+      // absolute value so it stays continuous no matter which way the phone
+      // is rotated in hand, unlike the beta/gamma Euler angles from
+      // deviceorientation.
+      const cos = Math.max(-1, Math.min(1, Math.abs(smoothedZ) / magnitude));
+      tiltDeg = Math.acos(cos) * (180 / Math.PI);
+    } else {
+      // Angle between the current orientation and the captured reference
+      // vector (dot product of two unit vectors), which is symmetric for
+      // tilting either direction away from that reference.
+      const rx = smoothedX / magnitude;
+      const ry = smoothedY / magnitude;
+      const rz = smoothedZ / magnitude;
+      const dot = rx * edgeReference.x + ry * edgeReference.y + rz * edgeReference.z;
+      tiltDeg = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+    }
 
     horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
     angleEl.textContent = `${Math.round(tiltDeg)}°`;
