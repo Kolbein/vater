@@ -1,11 +1,11 @@
 {
-  "name": "Bubble Level",
-  "short_name": "Level",
-  "description": "A simple bubble level using your phone's motion sensors.",
+  "name": "Vater",
+  "short_name": "Vater",
+  "description": "Et enkelt vater som bruker telefonens bevegelsessensorer.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#111318",
   "theme_color": "#111318",
   "icons": [

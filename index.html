@@ -1,35 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Bubble Level</title>
+<title>Vater</title>
 <meta name="theme-color" content="#111318" />
-<meta name="description" content="A simple bubble level that uses your phone's motion sensors." />
+<meta name="description" content="Et enkelt vater som bruker telefonens bevegelsessensorer." />
 
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Level" />
+<meta name="apple-mobile-web-app-title" content="Vater" />
 
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="app">
     <header class="topbar">
-      <h1>Bubble Level</h1>
-      <button id="calibrateBtn" class="icon-btn" title="Calibrate to current position">Calibrate</button>
+      <h1>Vater</h1>
+      <button id="calibrateBtn" class="icon-btn" title="Kalibrer til gjeldende posisjon">Kalibrer</button>
     </header>
 
     <section class="readout" aria-live="polite">
       <div class="axis">
-        <span class="axis-label">Roll</span>
+        <span class="axis-label">Rull</span>
         <span id="tiltX" class="axis-value">0.0°</span>
       </div>
       <div class="axis">
-        <span class="axis-label">Pitch</span>
+        <span class="axis-label">Stamp</span>
         <span id="tiltY" class="axis-value">0.0°</span>
       </div>
     </section>
@@ -54,7 +54,7 @@
     </section>
 
     <footer class="footer">
-      <button id="enableBtn" class="primary-btn" hidden>Enable Motion Sensors</button>
+      <button id="enableBtn" class="primary-btn" hidden>Aktiver bevegelsessensorer</button>
       <p id="status" class="status"></p>
     </footer>
   </main>

@@ -34,7 +34,9 @@
     tiltXEl.textContent = `${x.toFixed(1)}°`;
     tiltYEl.textContent = `${y.toFixed(1)}°`;
 
-    const isLevel = Math.abs(x) < LEVEL_THRESHOLD && Math.abs(y) < LEVEL_THRESHOLD;
+    const isFlat = Math.abs(x) < LEVEL_THRESHOLD && Math.abs(y) < LEVEL_THRESHOLD;
+    const is45 = Math.abs(Math.abs(x) - 45) < LEVEL_THRESHOLD && Math.abs(y) < LEVEL_THRESHOLD;
+    const isLevel = isFlat || is45;
     levelEl.classList.toggle("is-level", isLevel);
     tiltXEl.classList.toggle("is-level", isLevel);
     tiltYEl.classList.toggle("is-level", isLevel);
@@ -43,16 +45,6 @@
       navigator.vibrate(20);
     }
     updateBubble._wasLevel = isLevel;
-  }
-
-  function getOrientationAngle() {
-    if (screen.orientation && typeof screen.orientation.angle === "number") {
-      return screen.orientation.angle;
-    }
-    if (typeof window.orientation === "number") {
-      return window.orientation;
-    }
-    return 0;
   }
 
   let rawX = 0;
@@ -66,31 +58,9 @@
     const { beta, gamma } = event;
     if (beta === null || gamma === null) return;
 
-    const angle = getOrientationAngle();
-    let x;
-    let y;
-
-    switch (angle) {
-      case 90:
-        x = -beta;
-        y = gamma;
-        break;
-      case -90:
-      case 270:
-        x = beta;
-        y = -gamma;
-        break;
-      case 180:
-        x = -gamma;
-        y = -beta;
-        break;
-      default:
-        x = gamma;
-        y = beta;
-    }
-
-    rawX = x;
-    rawY = y;
+    // Portrait-only mapping: avoids flips caused by screen-orientation edge cases.
+    rawX = gamma;
+    rawY = beta;
     hasNewReading = true;
   }
 
@@ -106,7 +76,7 @@
   function startListening() {
     window.addEventListener("deviceorientation", handleOrientation);
     requestAnimationFrame(renderLoop);
-    setStatus("Tilt your phone flat on a surface.");
+    setStatus("Legg telefonen flatt på et underlag.");
   }
 
   function needsIOSPermission() {
@@ -118,13 +88,13 @@
 
   function init() {
     if (!window.DeviceOrientationEvent) {
-      setStatus("This device does not support motion sensors.");
+      setStatus("Denne enheten støtter ikke bevegelsessensorer.");
       return;
     }
 
     if (needsIOSPermission()) {
       enableBtn.hidden = false;
-      setStatus("Tap the button below to allow motion access.");
+      setStatus("Trykk på knappen under for å gi tilgang til bevegelsessensorer.");
       enableBtn.addEventListener("click", async () => {
         try {
           const result = await DeviceOrientationEvent.requestPermission();
@@ -132,10 +102,10 @@
             enableBtn.hidden = true;
             startListening();
           } else {
-            setStatus("Motion access was denied.");
+            setStatus("Tilgang til bevegelsessensorer ble avslått.");
           }
         } catch (err) {
-          setStatus("Could not request motion access.");
+          setStatus("Kunne ikke be om tilgang til bevegelsessensorer.");
         }
       });
     } else {
@@ -146,7 +116,7 @@
   calibrateBtn.addEventListener("click", () => {
     calibration = { x: smoothedX, y: smoothedY };
     if (navigator.vibrate) navigator.vibrate(15);
-    setStatus("Calibrated to current position.");
+    setStatus("Kalibrert til gjeldende posisjon.");
   });
 
   init();
