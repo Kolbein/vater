@@ -24,11 +24,11 @@
 
     <section class="readout" aria-live="polite">
       <span id="tiltAngle" class="angle-value">0.0°</span>
-      <span class="angle-label">Vinkel</span>
+      <span id="axisMode" class="angle-label">Vinkel · Flate</span>
     </section>
 
     <section class="level-wrap">
-      <div id="level" class="level">
+      <div id="level" class="level" role="button" aria-label="Trykk for å bytte mellom flate- og kantmåling">
         <div class="horizon-mask">
           <div id="horizonRoll" class="horizon-roll">
             <div class="sky"></div>
@@ -42,6 +42,7 @@
           <span class="reference-tick reference-tick-right"></span>
         </div>
       </div>
+      <p class="tap-hint">Trykk på sirkelen for å måle på kanten i stedet</p>
     </section>
 
     <footer class="footer">

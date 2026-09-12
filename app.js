@@ -4,6 +4,7 @@
   const levelEl = document.getElementById("level");
   const horizonRollEl = document.getElementById("horizonRoll");
   const angleEl = document.getElementById("tiltAngle");
+  const modeEl = document.getElementById("axisMode");
   const enableBtn = document.getElementById("enableBtn");
   const statusEl = document.getElementById("status");
 
@@ -19,14 +20,24 @@
   let smoothedZ = 9.81;
   let hasReading = false;
   let wasLevel = false;
+  let axisMode = "face"; // "face" = phone flat against the surface, "edge" = phone standing on its edge
+
+  levelEl.addEventListener("click", () => {
+    axisMode = axisMode === "face" ? "edge" : "face";
+    modeEl.textContent = axisMode === "face" ? "Vinkel \u00b7 Flate" : "Vinkel \u00b7 Kant";
+    if (navigator.vibrate) navigator.vibrate(10);
+  });
 
   function updateReadout() {
-    // Angle between gravity and the screen's normal axis (z). Unlike the
-    // beta/gamma Euler angles from deviceorientation, this stays continuous
-    // and doesn't depend on whether the phone is held portrait or sideways,
-    // so small hand movement no longer causes the display to flip.
+    // Angle between gravity and the reference axis. Unlike the beta/gamma
+    // Euler angles from deviceorientation, this stays continuous and doesn't
+    // depend on which way the phone is rotated in hand, so small movement
+    // no longer causes the display to flip. "Edge" mode swaps in the axis
+    // that runs along the phone's length, for measuring while it stands on
+    // its edge instead of lying flat against the surface.
+    const referenceAxis = axisMode === "face" ? smoothedZ : smoothedY;
     const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
-    const cos = Math.max(-1, Math.min(1, smoothedZ / magnitude));
+    const cos = Math.max(-1, Math.min(1, referenceAxis / magnitude));
     const tiltDeg = Math.acos(cos) * (180 / Math.PI);
 
     horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
@@ -82,7 +93,6 @@
 
     if (needsIOSPermission()) {
       enableBtn.hidden = false;
-      setStatus("Trykk på knappen under for å gi tilgang til bevegelsessensorer.");
       enableBtn.addEventListener("click", async () => {
         try {
           const result = await DeviceMotionEvent.requestPermission();
