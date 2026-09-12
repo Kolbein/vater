@@ -23,17 +23,20 @@
   let wasLevel = false;
 
   // "Flate" measures the absolute angle from gravity (screen-normal axis) —
-  // well-defined regardless of how the phone is rotated in hand. "Kant" is
-  // for checking a vertical surface/edge (e.g. a door frame): the phone rolls
-  // around its own screen-normal axis, like the classic picture-frame-level
-  // trick, so the signed roll angle is read from the gravity vector's x/y
-  // components (the screen plane) rather than its unsigned distance from an
-  // arbitrary reference direction.
+  // well-defined regardless of how the phone is rotated in hand. "Kant" has
+  // no single well-defined axis (it depends on which edge and which way the
+  // phone is held, which we can't know or reliably read back from the raw
+  // sensor across browsers), so instead we capture the current orientation
+  // as a reference vector the moment edge mode is entered, and measure the
+  // angle away from that reference. This is symmetric by construction: a
+  // physical tilt of N degrees to the left or right away from the reference
+  // always produces the same angle, with no axis to get wrong.
   let mode = "face"; // "face" | "edge"
   let edgeReference = null;
 
   function captureEdgeReference() {
-    edgeReference = { x: smoothedX, y: smoothedY };
+    const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
+    edgeReference = { x: smoothedX / magnitude, y: smoothedY / magnitude, z: smoothedZ / magnitude };
   }
 
   levelEl.addEventListener("click", () => {
@@ -60,20 +63,20 @@
       const cos = Math.max(-1, Math.min(1, Math.abs(smoothedZ) / magnitude));
       tiltDeg = Math.acos(cos) * (180 / Math.PI);
     } else {
-      // Signed angle (in the screen's x/y plane) between the current gravity
-      // reading and the one captured at mode-entry — via atan2 of the 2D
-      // cross and dot products, so it's continuous and correctly signed for
-      // both tilt directions instead of collapsing to an unsigned magnitude.
-      const cross = edgeReference.x * smoothedY - edgeReference.y * smoothedX;
-      const dot = edgeReference.x * smoothedX + edgeReference.y * smoothedY;
-      tiltDeg = Math.atan2(cross, dot) * (180 / Math.PI);
+      // Angle between the current orientation and the captured reference
+      // vector (dot product of two unit vectors), which is symmetric for
+      // tilting either direction away from that reference.
+      const rx = smoothedX / magnitude;
+      const ry = smoothedY / magnitude;
+      const rz = smoothedZ / magnitude;
+      const dot = rx * edgeReference.x + ry * edgeReference.y + rz * edgeReference.z;
+      tiltDeg = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
     }
 
     horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
-    const displayDeg = Math.abs(tiltDeg);
-    angleEl.textContent = `${Math.round(displayDeg)}°`;
+    angleEl.textContent = `${Math.round(tiltDeg)}°`;
 
-    const isLevel = TARGET_ANGLES.some((target) => Math.abs(displayDeg - target) < LEVEL_THRESHOLD);
+    const isLevel = TARGET_ANGLES.some((target) => Math.abs(tiltDeg - target) < LEVEL_THRESHOLD);
     levelEl.classList.toggle("is-level", isLevel);
     angleEl.classList.toggle("is-level", isLevel);
 
