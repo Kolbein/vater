@@ -27,18 +27,39 @@
   // no single well-defined axis (it depends on which edge and which way the
   // phone is held, which we can't know or reliably read back from the raw
   // sensor across browsers), so instead we capture the current orientation
-  // as a reference vector the moment edge mode is entered, and measure the
-  // angle away from that reference. This is symmetric by construction: a
-  // physical tilt of N degrees to the left or right away from the reference
-  // always produces the same angle, with no axis to get wrong.
+  // as a reference vector the moment edge mode is entered, together with a
+  // fixed pair of axes spanning the plane perpendicular to it. Reading the
+  // current tilt as an angle within that fixed plane (atan2) gives a signed,
+  // continuous result for the whole session, with no dependency on which way
+  // the phone happens to move first.
   let mode = "face"; // "face" | "edge"
   let edgeReference = null;
-  let edgeAxis = null;
 
   function captureEdgeReference() {
     const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
-    edgeReference = { x: smoothedX / magnitude, y: smoothedY / magnitude, z: smoothedZ / magnitude };
-    edgeAxis = null;
+    const rx = smoothedX / magnitude;
+    const ry = smoothedY / magnitude;
+    const rz = smoothedZ / magnitude;
+
+    // Any helper vector not parallel to the reference works; it only fixes
+    // which direction reads as "positive", not the physical meaning.
+    const helper = Math.abs(rz) < 0.9 ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
+    const helperDot = helper.x * rx + helper.y * ry + helper.z * rz;
+    let bx = helper.x - helperDot * rx;
+    let by = helper.y - helperDot * ry;
+    let bz = helper.z - helperDot * rz;
+    const bMagnitude = Math.hypot(bx, by, bz) || 1;
+    bx /= bMagnitude;
+    by /= bMagnitude;
+    bz /= bMagnitude;
+
+    edgeReference = {
+      x: rx,
+      y: ry,
+      z: rz,
+      basisX: { x: bx, y: by, z: bz },
+      basisY: { x: ry * bz - rz * by, y: rz * bx - rx * bz, z: rx * by - ry * bx },
+    };
   }
 
   levelEl.addEventListener("click", () => {
@@ -65,34 +86,23 @@
       const cos = Math.max(-1, Math.min(1, Math.abs(smoothedZ) / magnitude));
       tiltDeg = Math.acos(cos) * (180 / Math.PI);
     } else {
-      // Angle between the current orientation and the captured reference
-      // vector (dot product of two unit vectors), via acos, which only ever
-      // gives an unsigned magnitude — so we recover the sign (left vs right)
-      // from the cross product, which points along the axis the phone is
-      // rotating around. We lock onto that axis the first time the tilt is
-      // large enough to measure it reliably, then reuse it on every later
-      // frame so the sign stays consistent even as the tilt returns near zero.
+      // Project the current orientation onto the plane perpendicular to the
+      // reference vector, then read its angle within that plane against the
+      // fixed basis captured alongside it — a signed, continuous angle for
+      // any tilt direction, stable even as the tilt passes through 90°.
       const rx = smoothedX / magnitude;
       const ry = smoothedY / magnitude;
       const rz = smoothedZ / magnitude;
-      const dot = rx * edgeReference.x + ry * edgeReference.y + rz * edgeReference.z;
-      const unsignedDeg = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
 
-      const cx = edgeReference.y * rz - edgeReference.z * ry;
-      const cy = edgeReference.z * rx - edgeReference.x * rz;
-      const cz = edgeReference.x * ry - edgeReference.y * rx;
-      const crossMagnitude = Math.hypot(cx, cy, cz);
+      const alongRef = rx * edgeReference.x + ry * edgeReference.y + rz * edgeReference.z;
+      const px = rx - alongRef * edgeReference.x;
+      const py = ry - alongRef * edgeReference.y;
+      const pz = rz - alongRef * edgeReference.z;
 
-      if (!edgeAxis && crossMagnitude > 0.05) {
-        edgeAxis = { x: cx / crossMagnitude, y: cy / crossMagnitude, z: cz / crossMagnitude };
-      }
+      const projX = px * edgeReference.basisX.x + py * edgeReference.basisX.y + pz * edgeReference.basisX.z;
+      const projY = px * edgeReference.basisY.x + py * edgeReference.basisY.y + pz * edgeReference.basisY.z;
 
-      if (edgeAxis) {
-        const signedComponent = cx * edgeAxis.x + cy * edgeAxis.y + cz * edgeAxis.z;
-        tiltDeg = signedComponent < 0 ? -unsignedDeg : unsignedDeg;
-      } else {
-        tiltDeg = unsignedDeg;
-      }
+      tiltDeg = Math.atan2(projY, projX) * (180 / Math.PI);
     }
 
     const displayDeg = Math.abs(tiltDeg);
