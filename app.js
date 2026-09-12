@@ -8,8 +8,9 @@
   const enableBtn = document.getElementById("enableBtn");
   const statusEl = document.getElementById("status");
 
-  const LEVEL_THRESHOLD = 0.7; // degrees within which we consider it "level"
+  const LEVEL_THRESHOLD = 1; // degrees within which we consider it "level"
   const SMOOTHING = 0.15; // lower = smoother but slower to react
+  const TARGET_ANGLES = [0, 45, 90];
 
   function setStatus(text) {
     statusEl.textContent = text;
@@ -29,26 +30,23 @@
   });
 
   function updateReadout() {
-    // Angle between gravity and the reference axis. Unlike the beta/gamma
-    // Euler angles from deviceorientation, this stays continuous and doesn't
-    // depend on which way the phone is rotated in hand, so small movement
-    // no longer causes the display to flip. "Edge" mode swaps in the axis
-    // that runs along the phone's length, for measuring while it stands on
-    // its edge instead of lying flat against the surface.
+    // Angle between gravity and the reference axis (or its opposite, via the
+    // absolute value), so tilting either clockwise or counter-clockwise past
+    // the axis reads the same way. This stays continuous regardless of how
+    // the phone is rotated in hand, unlike the beta/gamma Euler angles from
+    // deviceorientation, so small movement no longer causes the display to
+    // flip. "Edge" mode swaps in the axis that runs along the phone's
+    // length, for measuring while it stands on its edge instead of lying
+    // flat against the surface.
     const referenceAxis = axisMode === "face" ? smoothedZ : smoothedY;
     const magnitude = Math.hypot(smoothedX, smoothedY, smoothedZ) || 1;
-    const cos = Math.max(-1, Math.min(1, referenceAxis / magnitude));
+    const cos = Math.max(-1, Math.min(1, Math.abs(referenceAxis) / magnitude));
     const tiltDeg = Math.acos(cos) * (180 / Math.PI);
 
-    // Edge mode targets 45°, so the ground should read flat/level right at
-    // that target instead of at 0°, matching the natural feel of face mode.
-    const visualTarget = axisMode === "face" ? 0 : 45;
-    horizonRollEl.style.transform = `rotate(${-(tiltDeg - visualTarget)}deg)`;
+    horizonRollEl.style.transform = `rotate(${-tiltDeg}deg)`;
     angleEl.textContent = `${tiltDeg.toFixed(1)}°`;
 
-    const isFlat = tiltDeg < LEVEL_THRESHOLD;
-    const is45 = Math.abs(tiltDeg - 45) < LEVEL_THRESHOLD;
-    const isLevel = isFlat || is45;
+    const isLevel = TARGET_ANGLES.some((target) => Math.abs(tiltDeg - target) < LEVEL_THRESHOLD);
     levelEl.classList.toggle("is-level", isLevel);
     angleEl.classList.toggle("is-level", isLevel);
 

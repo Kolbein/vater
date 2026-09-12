@@ -133,7 +133,7 @@ body {
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(180deg, #67e8f9 0%, #22c1dc 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #dfe3ea 100%);
 }
 
 .ground {
@@ -142,7 +142,12 @@ body {
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(180deg, #ff9a5a 0%, #ff6f3c 100%);
+  background: linear-gradient(180deg, #ff5a5a 0%, #e63946 100%);
+  transition: background 0.15s ease;
+}
+
+.level.is-level .ground {
+  background: linear-gradient(180deg, #7bffb6, var(--accent) 100%);
 }
 
 .horizon-line {
@@ -151,42 +156,8 @@ body {
   left: 0;
   right: 0;
   height: 3px;
-  background: #f2f3f5;
+  background: #111318;
   transform: translateY(-50%);
-}
-
-.reference {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 74%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  pointer-events: none;
-}
-
-.reference-line {
-  flex: 1;
-  height: 2px;
-  margin: 0 8px;
-  background: #ffd23d;
-  box-shadow: 0 0 8px rgba(255, 210, 61, 0.7);
-}
-
-.reference-tick {
-  width: 3px;
-  height: 22px;
-  background: #ffd23d;
-  border-radius: 2px;
-  box-shadow: 0 0 8px rgba(255, 210, 61, 0.7);
-}
-
-.level.is-level .reference-line,
-.level.is-level .reference-tick {
-  background: var(--accent);
-  box-shadow: 0 0 12px rgba(61, 220, 132, 0.9);
 }
 
 .footer {
