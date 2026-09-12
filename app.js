@@ -57,6 +57,10 @@
 
   let rawX = 0;
   let rawY = 0;
+  let smoothedX = 0;
+  let smoothedY = 0;
+  let hasNewReading = false;
+  const SMOOTHING = 0.15; // lower = smoother but slower to react
 
   function handleOrientation(event) {
     const { beta, gamma } = event;
@@ -87,11 +91,21 @@
 
     rawX = x;
     rawY = y;
-    updateBubble(rawX, rawY);
+    hasNewReading = true;
+  }
+
+  function renderLoop() {
+    if (hasNewReading) {
+      smoothedX += (rawX - smoothedX) * SMOOTHING;
+      smoothedY += (rawY - smoothedY) * SMOOTHING;
+      updateBubble(smoothedX, smoothedY);
+    }
+    requestAnimationFrame(renderLoop);
   }
 
   function startListening() {
-    window.addEventListener("deviceorientation", handleOrientation, true);
+    window.addEventListener("deviceorientation", handleOrientation);
+    requestAnimationFrame(renderLoop);
     setStatus("Tilt your phone flat on a surface.");
   }
 
@@ -130,7 +144,7 @@
   }
 
   calibrateBtn.addEventListener("click", () => {
-    calibration = { x: rawX, y: rawY };
+    calibration = { x: smoothedX, y: smoothedY };
     if (navigator.vibrate) navigator.vibrate(15);
     setStatus("Calibrated to current position.");
   });

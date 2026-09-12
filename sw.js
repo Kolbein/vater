@@ -1,4 +1,4 @@
-const CACHE_NAME = "bubble-level-v1";
+const CACHE_NAME = "bubble-level-v2";
 const ASSETS = [
   "./",
   "./index.html",
